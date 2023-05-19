@@ -7,16 +7,17 @@ import scipy.stats as stats
 import wrangle
 pd.set_option('display.max_columns', None)
 
+def get_zillow_csv():
+    df = pd.read_csv('zillow_data.csv')
 
-df = pd.read_csv('zillow_data.csv')
 
 
-
-df = df.sort_values(by = 'transactiondate')
-df = df.drop_duplicates(subset = 'parcelid', keep= 'last')
-df = df.drop(columns = ['typeconstructiontypeid','storytypeid','heatingorsystemtypeid',
-                  'buildingclasstypeid', 'architecturalstyletypeid','airconditioningtypeid',
-                  'airconditioningtypeid','Unnamed: 0'])
+    df = df.sort_values(by = 'transactiondate')
+    df = df.drop_duplicates(subset = 'parcelid', keep= 'last')
+    df = df.drop(columns = ['typeconstructiontypeid','storytypeid','heatingorsystemtypeid',
+                      'buildingclasstypeid', 'architecturalstyletypeid','airconditioningtypeid',
+                      'airconditioningtypeid','Unnamed: 0','id', 'propertylandusetypeid','buildingqualitytypeid', 'decktypeid','pooltypeid10','pooltypeid2', 'pooltypeid7','decktypeid','propertylandusetypeid','id.1','finishedsquarefeet12','finishedsquarefeet13','finishedsquarefeet15','finishedsquarefeet50','finishedsquarefeet6','finishedfloor1squarefeet','calculatedbathnbr','fullbathcnt','yardbuildingsqft17','yardbuildingsqft26','poolsizesum','fireplaceflag','taxdelinquencyyear','buildingclassdesc','typeconstructiondesc','structuretaxvaluedollarcnt','landtaxvaluedollarcnt','basementsqft','garagetotalsqft'])
+    return df
 
 
 def nulls_by_col(df):
@@ -114,4 +115,8 @@ def remove_columns(df, cols_to_remove):
     - return the new df
     """
     df = df.drop(columns=cols_to_remove)
+    return df
+
+def run_everything_rid_of_nulls(df):
+    df = get_single_homes(df)
     return df
