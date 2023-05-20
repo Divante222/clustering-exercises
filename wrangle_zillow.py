@@ -5,18 +5,133 @@ import seaborn as sns
 import scipy.stats as stats
 # houses my function to connect to Codeup DB
 import wrangle
+import os
+import env
+from sklearn.model_selection import train_test_split
 pd.set_option('display.max_columns', None)
+
+
+def split_data(df):
+    '''
+    Takes in a dataframe and returns train, validate, test subset dataframes
+    '''
+    
+    
+    train, test = train_test_split(df,
+                                   test_size=.2, 
+                                   random_state=123, 
+                                   
+                                   )
+    train, validate = train_test_split(train, 
+                                       test_size=.25, 
+                                       random_state=123, 
+                                       
+                                       )
+    
+    return train, validate, test
+
+
+def new_zillow_data(SQL_query, url):
+    '''
+    this function will:
+    - take in a SQL_query 
+    -create a connection url to mySQL
+    -return a df of the given query from the zillow database
+    
+    '''
+    
+    url= f'mysql+pymysql://{env.username}:{env.password}@{env.hostname}/zillow'
+   
+    return pd.read_sql(SQL_query, url)   
+    
+    
+def get_zillow_data(filename = "zillow_data.csv"):
+    '''
+    this function will:
+    -check local directory for csv file
+        return if exists
+    if csv doesn't exist
+    if csv doesnt exist:
+        - create a df of the SQL_query
+        write df to csv
+    output zillow df
+    
+    '''
+    directory = os.getcwd()
+    
+    SQL_query = """select * from properties_2017
+left join propertylandusetype using(propertylandusetypeid)
+left join predictions_2017 using(parcelid)
+left join airconditioningtype using( airconditioningtypeid)
+left join architecturalstyletype using(architecturalstyletypeid)
+left join buildingclasstype using(buildingclasstypeid)
+left join heatingorsystemtype using(heatingorsystemtypeid)
+left join storytype using(storytypeid)
+left join typeconstructiontype using(typeconstructiontypeid)
+where YEAR(transactiondate) = 2017;"""
+
+    
+    filename = "zillow_data.csv"
+    
+    url= f'mysql+pymysql://{env.username}:{env.password}@{env.hostname}/zillow'
+    
+
+
+    if os.path.exists(directory + filename):
+        df = pd.read_csv(filename)
+        return df
+    else:
+        df= new_zillow_data(SQL_query, url)
+        df.to_csv(filename)
+        return df
+
+
+
+
+
+
+
+
+
 
 def get_zillow_csv():
     df = pd.read_csv('zillow_data.csv')
-
-
-
     df = df.sort_values(by = 'transactiondate')
     df = df.drop_duplicates(subset = 'parcelid', keep= 'last')
+
+
     df = df.drop(columns = ['typeconstructiontypeid','storytypeid','heatingorsystemtypeid',
                       'buildingclasstypeid', 'architecturalstyletypeid','airconditioningtypeid',
-                      'airconditioningtypeid','Unnamed: 0','id', 'propertylandusetypeid','buildingqualitytypeid', 'decktypeid','pooltypeid10','pooltypeid2', 'pooltypeid7','decktypeid','propertylandusetypeid','id.1','finishedsquarefeet12','finishedsquarefeet13','finishedsquarefeet15','finishedsquarefeet50','finishedsquarefeet6','finishedfloor1squarefeet','calculatedbathnbr','fullbathcnt','yardbuildingsqft17','yardbuildingsqft26','poolsizesum','fireplaceflag','taxdelinquencyyear','buildingclassdesc','typeconstructiondesc','structuretaxvaluedollarcnt','landtaxvaluedollarcnt','basementsqft','garagetotalsqft'])
+                      'airconditioningtypeid','Unnamed: 0','id', 'propertylandusetypeid','buildingqualitytypeid', 
+                      'decktypeid','pooltypeid10','pooltypeid2', 'pooltypeid7','decktypeid','propertylandusetypeid','id.1',
+                      'finishedsquarefeet12','finishedsquarefeet13','finishedsquarefeet15','finishedsquarefeet50','finishedsquarefeet6',
+                      'finishedfloor1squarefeet','calculatedbathnbr','fullbathcnt','yardbuildingsqft17','yardbuildingsqft26','poolsizesum',
+                      'fireplaceflag','taxdelinquencyyear','buildingclassdesc','typeconstructiondesc','structuretaxvaluedollarcnt',
+                      'landtaxvaluedollarcnt','basementsqft','garagetotalsqft', 'garagecarcnt','hashottuborspa','regionidneighborhood','roomcnt',
+                      'threequarterbathnbr','unitcnt','numberofstories','assessmentyear','architecturalstyledesc','heatingorsystemdesc','storydesc',
+                      'taxamount'])
+
+    
+    df = df[(df.propertylandusedesc == 'Single Family Residential') | (df.propertylandusedesc == 'Mobile Home')]
+    df.lotsizesquarefeet = df.lotsizesquarefeet.fillna(0.0)
+    df.taxdelinquencyflag = df.taxdelinquencyflag.fillna('N')
+    df.poolcnt = df.poolcnt.fillna(0)
+    df.airconditioningdesc = df.airconditioningdesc.fillna('Yes')
+    df = df.dropna(subset = ['yearbuilt','regionidzip'])
+
+    df = df[df.censustractandblock.notnull()]
+    df.yearbuilt = df.yearbuilt.astype(int)
+    df.fips = df.fips.astype(int)
+    df.regionidzip = df.regionidzip.astype(int)
+    
+    df.propertyzoningdesc = df.propertyzoningdesc.fillna('unknown')
+    df.dropna(subset = ['calculatedfinishedsquarefeet'], inplace=True)
+    df.fireplacecnt = df.fireplacecnt.fillna(0.0)
+
+    df.calculatedfinishedsquarefeet = df.calculatedfinishedsquarefeet[df.calculatedfinishedsquarefeet < 25000]
+    df.calculatedfinishedsquarefeet = df.calculatedfinishedsquarefeet[df.calculatedfinishedsquarefeet > 159]
+    df = df[df.taxvaluedollarcnt < df.taxvaluedollarcnt.quantile(.95)].copy()
+    
     return df
 
 
@@ -58,9 +173,6 @@ def handle_missing_values(df, prop_required_columns=0.5, prop_required_rows=0.75
     
     return df
 
-def get_single_homes(df):
-    df = df[(df.propertylandusedesc == 'Single Family Residential') | (df.propertylandusedesc == 'Mobile Home')]
-    return df
 
 
 def get_upper_outliers(s, m=1.5):
@@ -117,6 +229,3 @@ def remove_columns(df, cols_to_remove):
     df = df.drop(columns=cols_to_remove)
     return df
 
-def run_everything_rid_of_nulls(df):
-    df = get_single_homes(df)
-    return df
