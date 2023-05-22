@@ -153,14 +153,20 @@ def scaler_robust(X_train, X_validate, X_test):
     scaler = RobustScaler()
     return scaler.fit_transform(X_train), scaler.transform(X_validate), scaler.transform(X_test)
 
+def scaler_robust(X_train, X_validate, X_test):
+    '''
+    takes train, test, and validate data and uses the RobustScaler on it
+    '''
+    scaler = RobustScaler()
+    return scaler.fit_transform(X_train), scaler.transform(X_validate), scaler.transform(X_test)
 
-def standard_scaler(X_train, X_validate, X_test):
+
+def standard_scaler_small(X_train):
     '''
     takes train, test, and validate data and uses the standard_scaler on it
     '''
     scaler = StandardScaler()
-    return scaler.fit_transform(X_train), scaler.transform(X_validate), scaler.transform(X_test)
-
+    return scaler.fit_transform(X_train)
 
 def rfe(X_train, y_train, the_k):
     '''
@@ -410,3 +416,84 @@ def bathroom_bins(train):
 
     return bath_0_2, bath_2_4, bath_4_6, bath_6_8, train
 
+def new_iris_data(SQL_query, url):
+    '''
+    this function will:
+    - take in a SQL_query 
+    -create a connection url to mySQL
+    -return a df of the given query from the iris_db
+    
+    '''
+    
+    url= f'mysql+pymysql://{env.username}:{env.password}@{env.hostname}/iris_db'
+    return pd.read_sql(SQL_query,url)    
+        
+
+    
+def get_iris_data(filename = "iris.csv"):
+
+    '''
+    this function will:
+    -check local directory for csv file
+        return if exists
+    if csv doesn't exist
+    if csv doesnt exist:
+        - create a df of the SQL_query
+        write df to csv
+    output iris_db df
+    
+    '''
+    SQL_query = '''select * from measurements
+    join species using(species_id);
+    ;'''    
+    url= f'mysql+pymysql://{env.username}:{env.password}@{env.hostname}/iris_db'
+    filename = "iris_db.csv"
+
+    directory = os.getcwd()
+    if os.path.exists(directory + filename):
+        df = pd.read_csv(filename)
+        return df
+    else:
+        df = new_iris_data(SQL_query, url)
+        df.to_csv(filename)
+        return df
+    
+def new_mall_data(SQL_query, url):
+    '''
+    this function will:
+    - take in a SQL_query 
+    -create a connection url to mySQL
+    -return a df of the given query from the mall db
+    
+    '''
+    
+    url= f'mysql+pymysql://{env.username}:{env.password}@{env.hostname}/mall_customers'
+    return pd.read_sql(SQL_query,url) 
+
+
+def get_mall_customers(filename = "mall.csv"):
+
+    '''
+    this function will:
+    -check local directory for csv file
+        return if exists
+    if csv doesn't exist
+    if csv doesnt exist:
+        - create a df of the SQL_query
+        write df to csv
+    output mall df
+    
+    '''
+    SQL_query = '''select * from customers;'''    
+
+    url= f'mysql+pymysql://{env.username}:{env.password}@{env.hostname}/mall_customers'
+    filename = "mall.csv"
+
+    directory = os.getcwd()
+    if os.path.exists(directory + filename):
+        df = pd.read_csv(filename)
+        return df
+    else:
+        df = new_mall_data(SQL_query, url)
+        df.to_csv(filename)
+        return df
